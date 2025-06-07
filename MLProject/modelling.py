@@ -18,7 +18,7 @@ def main(data_dir):
     os.environ["MLFLOW_TRACKING_PASSWORD"] = mlflow_password
 
     mlflow.set_tracking_uri(mlflow_tracking_uri)
-    mlflow.set_experiment("diabetes Modeling - Hyperparameter Tuning")
+    mlflow.set_experiment("Diabetes Modeling - Hyperparameter Tuning")
     mlflow.sklearn.autolog()
 
     X_train = pd.read_csv(os.path.join(data_dir, "x_train.csv"))
