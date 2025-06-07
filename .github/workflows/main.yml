@@ -30,7 +30,7 @@ jobs:
 
       - name: Run modelling
         run: |
-          python modelling.py --data_dir dataset_preprocessing
+          python MLProject/modelling.py --data_dir dataset_preprocessing
 
       - name: Get latest MLflow run_id
         run: |
