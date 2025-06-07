@@ -28,9 +28,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r MLProject/requirements.txt
 
-      - name: Run modelling
+      - name: Run Modelling Script
+        working-directory: ./MLProject
         run: |
-          python MLProject/modelling.py --data_dir dataset_preprocessing
+          python modelling.py --data_dir dataset_preprocessing
+
 
       - name: Get latest MLflow run_id
         run: |
