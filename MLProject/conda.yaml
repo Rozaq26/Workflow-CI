@@ -1,14 +1,14 @@
-channels
-- conda-forge
-dependencies
-- python
-- pip
-- pip
-  - mlflow
-  - cloudpickle
-  - numpy
-  - pandas
-  - psutil
-  - scikit-learn
-  - scipy
-name mlflow-env
+name: mlflow-env
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - pip
+  - pip:
+      - mlflow
+      - cloudpickle
+      - numpy
+      - pandas
+      - psutil
+      - scikit-learn
+      - scipy
