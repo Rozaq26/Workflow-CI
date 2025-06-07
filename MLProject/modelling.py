@@ -3,8 +3,8 @@ import os
 import mlflow
 import mlflow.sklearn
 import pandas as pd
-from sklearn.svm import SVC
 import numpy as np
+from sklearn.svm import SVC
 
 def main(data_dir):
     mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
@@ -12,20 +12,15 @@ def main(data_dir):
     mlflow_password     = os.getenv("MLFLOW_TRACKING_PASSWORD")
 
     if not mlflow_tracking_uri or not mlflow_username or not mlflow_password:
-        raise EnvironmentError("MLFLOW_TRACKING_URI, MLFLOW_TRACKING_USERNAME, dan MLFLOW_TRACKING_PASSWORD harus di-set sebagai environment variable")
+        raise EnvironmentError("MLFLOW_TRACKING_URI, MLFLOW_TRACKING_USERNAME, dan MLFLOW_TRACKING_PASSWORD harus di-set")
 
-    # Set environment variables untuk autentikasi MLflow
     os.environ["MLFLOW_TRACKING_USERNAME"] = mlflow_username
     os.environ["MLFLOW_TRACKING_PASSWORD"] = mlflow_password
 
-    # Set tracking URI dan experiment
     mlflow.set_tracking_uri(mlflow_tracking_uri)
     mlflow.set_experiment("diabetes Modeling - Hyperparameter Tuning")
-
-    # Aktifkan autolog MLflow untuk sklearn
     mlflow.sklearn.autolog()
 
-    # Load data
     X_train = pd.read_csv(os.path.join(data_dir, "x_train.csv"))
     X_test = pd.read_csv(os.path.join(data_dir, "x_test.csv"))
     y_train = pd.read_csv(os.path.join(data_dir, "y_train.csv")).squeeze()
@@ -33,7 +28,6 @@ def main(data_dir):
 
     input_example = X_train.head(5)
 
-    # Hyperparameter grid
     C_range = np.logspace(-2, 2, 5)
     kernel_options = ['linear', 'rbf', 'poly']
     gamma_range = ['scale', 'auto']
@@ -48,7 +42,6 @@ def main(data_dir):
                 with mlflow.start_run(run_name=run_name):
                     model = SVC(C=C, kernel=kernel, gamma=gamma)
                     model.fit(X_train, y_train)
-
                     accuracy = model.score(X_test, y_test)
                     mlflow.log_metric("accuracy", accuracy)
 
@@ -68,5 +61,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, default="dataset_preprocessing", help="Path ke folder data")
     args = parser.parse_args()
-
     main(args.data_dir)
