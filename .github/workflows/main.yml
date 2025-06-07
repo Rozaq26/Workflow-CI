@@ -1,4 +1,4 @@
-name: MLflow CI/CD Workflow
+name: MLflow CI/CD Pipeline
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 jobs:
   mlflow-run:
     runs-on: ubuntu-latest
-
     env:
       MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
       MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
@@ -23,53 +22,56 @@ jobs:
         with:
           python-version: "3.12.7"
 
-      - name: Check Env
+      - name: Verify Environment Variables
         run: |
-          echo "MLFLOW_TRACKING_USERNAME is set: ${{ secrets.MLFLOW_TRACKING_USERNAME != '' }}"
-          echo "MLFLOW_TRACKING_PASSWORD is set: ${{ secrets.MLFLOW_TRACKING_PASSWORD != '' }}"
+          echo "MLFLOW_TRACKING_URI: $MLFLOW_TRACKING_URI"
+          if [ -z "$MLFLOW_TRACKING_USERNAME" ] || [ -z "$MLFLOW_TRACKING_PASSWORD" ]; then
+            echo "Error: MLflow credentials tidak di-set!"
+            exit 1
+          fi
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r MLProject/requirements.txt
+          pip install -r MLProject/requirements.txt mlflow
+
       - name: Run MLflow project
         run: |
           mlflow run MLProject --env-manager=local
 
       - name: Get latest MLflow run_id
+        id: get-run-id
         run: |
-          echo "Getting latest run ID..."
           python <<EOF
           import mlflow
           client = mlflow.tracking.MlflowClient()
-          runs = client.search_runs(experiment_ids=["0"], order_by=["start_time DESC"]) 
+          runs = client.search_runs(experiment_ids=["0"], order_by=["start_time DESC"], max_results=1)
+          if not runs:
+              raise Exception("Tidak ada run MLflow yang ditemukan!")
           run_id = runs[0].info.run_id
-          print(f"Latest run ID: {run_id}")
-          with open("${{ github.env }}", "a") as f:
-              f.write(f"RUN_ID={run_id}\n")
+          print(f"::set-output name=run_id::{run_id}")
           EOF
 
-      - name: Download model artifacts from DagsHub
+      - name: Download model artifacts
         run: |
-          echo "Downloading model artifact for run: $RUN_ID"
-          mlflow artifacts download --run-id $RUN_ID --artifact-path model -d ./downloaded
-          mv ./downloaded/model ./best_model
+          mlflow artifacts download --run-id ${{ steps.get-run-id.outputs.run_id }} --artifact-path model -d ./model_artifacts
+          mv ./model_artifacts/model ./best_model
 
-      - name: Build Docker Model
+      - name: Build Docker Image
         run: |
+          if [ ! -d "./best_model" ]; then
+              echo "Error: Folder 'best_model' tidak ditemukan!"
+              exit 1
+          fi
           mlflow models build-docker --model-uri ./best_model --name diabetes_model
 
-      - name: Log in to Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          
-      - name: Tag Docker Image
+
+      - name: Tag and Push Docker Image
         run: |
           docker tag diabetes_model ${{ secrets.DOCKER_USERNAME }}/diabetes_model:latest
-          
-
-      - name: Push Docker Image
-        run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/diabetes_model:latest
