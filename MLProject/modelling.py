@@ -31,40 +31,47 @@ def main(data_dir):
     
     input_example = X_train.head(5)
 
-    # Hyperparameter grid
     C_range = np.logspace(-2, 2, 5)
     kernel_options = ['linear', 'rbf', 'poly']
     gamma_range = ['scale', 'auto']
 
     best_accuracy = 0
     best_params = {}
+    best_model = None # << PERUBAHAN 1: Simpan objek model terbaik
 
-    for C in C_range:
-        for kernel in kernel_options:
-            for gamma in gamma_range:
-                run_name = f"SVC_C{C}_kernel{kernel}_gamma{gamma}"
-                with mlflow.start_run(run_name=run_name):
-                    model = SVC(C=C, kernel=kernel, gamma=gamma)
-                    model.fit(X_train, y_train)
+    with mlflow.start_run(): # Mulai satu run untuk seluruh proses tuning
+        for C in C_range:
+            for kernel in kernel_options:
+                for gamma in gamma_range:
+                    # Jalankan setiap iterasi sebagai nested run agar rapi
+                    with mlflow.start_run(run_name=f"SVC_C{C}_kernel{kernel}_gamma{gamma}", nested=True):
+                        model = SVC(C=C, kernel=kernel, gamma=gamma)
+                        model.fit(X_train, y_train)
+                        accuracy = model.score(X_test, y_test)
+                        mlflow.log_metric("accuracy", accuracy)
 
-                    accuracy = model.score(X_test, y_test)
-                    mlflow.log_metric("accuracy", accuracy)
+                        if accuracy > best_accuracy:
+                            best_accuracy = accuracy
+                            best_params = {"C": C, "kernel": kernel, "gamma": gamma}
+                            best_model = model # << PERUBAHAN 2: Simpan modelnya, jangan dilog dulu
 
-                    if accuracy > best_accuracy:
-                        best_accuracy = accuracy
-                        best_params = {"C": C, "kernel": kernel, "gamma": gamma}
-                        mlflow.sklearn.log_model(
-                            sk_model=model,
-                            artifact_path="best_model",
-                            input_example=input_example
-                        )
+        # Setelah loop selesai, log model terbaik HANYA SATU KALI di parent run
+        print("Best Accuracy:", best_accuracy)
+        print("Best Params:", best_params)
+        mlflow.log_metric("best_accuracy", best_accuracy)
+        mlflow.log_params(best_params)
 
-    print("Best Accuracy:", best_accuracy)
-    print("Best Params:", best_params)
+        if best_model:
+            # << PERUBAHAN 3: Log model terbaik di sini
+            mlflow.sklearn.log_model(
+                sk_model=best_model,
+                artifact_path="best_model",
+                input_example=input_example
+            )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="data_preprocessing", help="Path ke folder data")
+    parser.add_argument("--data_dir", type=str, default="dataset_preprocessing", help="Path ke folder data")
     args = parser.parse_args()
 
     main(args.data_dir)
