@@ -11,4 +11,7 @@ dependencies:
   - psutil==6.1.0
   - scikit-learn==1.6.1
   - scipy==1.15.3
+  - flask
+  - dagshub
+  - prometheus_client
 name: mlflow-env
