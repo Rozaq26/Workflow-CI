@@ -5,6 +5,7 @@ import mlflow.sklearn
 import pandas as pd
 from sklearn.svm import SVC
 import numpy as np
+from sklearn.metrics import precision_score
 
 def main(data_dir):
     mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
@@ -20,7 +21,6 @@ def main(data_dir):
 
     # Set tracking URI dan experiment
     mlflow.set_tracking_uri(mlflow_tracking_uri)
-
     mlflow.set_experiment("Diabetes Modeling - Hyperparameter Tuning")
     mlflow.sklearn.autolog()
 
@@ -48,7 +48,12 @@ def main(data_dir):
                     model.fit(X_train, y_train)
 
                     accuracy = model.score(X_test, y_test)
+                    y_pred = model.predict(X_test)
+                    # Menghitung precision menggunakan zero_division=1 untuk menghindari warning/error
+                    precision = precision_score(y_test, y_pred, average='weighted', zero_division=1)
+                    
                     mlflow.log_metric("accuracy", accuracy)
+                    mlflow.log_metric("precision", precision)
 
                     if accuracy > best_accuracy:
                         best_accuracy = accuracy
