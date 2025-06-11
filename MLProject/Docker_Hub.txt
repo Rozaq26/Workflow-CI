@@ -1,0 +1,3 @@
+untuk link daockerhub bisa dilihat di : 
+
+https://hub.docker.com/r/rozaqi/diabetes_model
